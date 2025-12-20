@@ -441,6 +441,16 @@ namespace NonaWin
 
             UpdateStatus($"完成！共複製 {totalCopied} 個圖檔到 ALL 目錄", Color.FromArgb(46, 204, 113));
             UpdateProgress(subDirectories.Length, subDirectories.Length);
+            
+            // 自動重新整理目錄狀態 (更新 ALL 資料夾的數量)
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => LoadDirectoryInfo()));
+            }
+            else
+            {
+                LoadDirectoryInfo();
+            }
         }
 
         private void UpdateStatus(string message, Color color)

@@ -1,60 +1,196 @@
-# Git Learning Log - NonaWin Project
+# Git 學習紀錄 - NonaWin 專案
 
-This document records the Git commands and concepts used to manage the NonaWin project.
+這份文件記錄了在開發 NonaWin 專案過程中所使用的 Git 指令與核心概念。
 
-## 1. Initial Setup (Initializing the Repository)
+## 1. 初始設定 (初始化倉庫)
 
-To start version controlling an existing project, we use the following commands:
+想要將現有的專案開始進行版本控制時，我們使用以下指令：
 
-### Commands Used:
+### 使用指令：
 ```bash
-# Initialize a new Git repository in the current directory
+# 在當前目錄初始化一個新的 Git 倉庫
 git init
 
-# Create a .gitignore file (crucial for .NET projects to ignore build artifacts)
-# (We created this file manually, but it tells git what NOT to track)
+# 建立 .gitignore 檔案 (這對 .NET 專案至關重要，用來忽略那些編譯產生的暫存檔)
+# (我們是手動建立此檔案，但它的作用是告訴 git 哪些檔案「不要」追蹤)
 
-# Stage all files for the first commit
+# 將所有檔案加入到「暫存區」(Staging Area)，準備進行第一次提交
 git add .
 
-# Create the initial commit
+# 建立初始提交 (Commit)
 git commit -m "Initial commit: NonaWin v1.0 with Explorer UI and Duplicate Analysis"
 ```
 
-### Concept: The Staging Area
-- **`git init`**: Creates a hidden `.git` folder that tracks changes.
-- **`git add`**: Moves changes from your working directory to the "Staging Area" (ready to be saved).
-- **`git commit`**: Takes a snapshot of the Staging Area and saves it to the history.
+### 核心概念：暫存區 (The Staging Area)
+- **`git init`**：建立一個隱藏的 `.git` 資料夾來追蹤所有變更。
+- **`git add`**：將工作目錄中的變更移動到「暫存區」（準備好被儲存的狀態）。
+- **`git commit`**：將「暫存區」的狀態拍一張快照，並永久儲存到歷史紀錄中。
 
 ---
 
-## 2. Feature Development Workflow (Branching)
+## 2. 功能開發流程 (分支操作)
 
-**Question**: *Should I modify directly or use a branch?*
+**問題**：*我應該直接修改程式碼，還是該開一個分支？*
 
-**Best Practice**: Use **Branches**.
-Even if you are working alone, using branches helps you organize your thoughts and allows you to "switch context" or discard failed experiments easily.
+**最佳實踐**：請務必使用 **分支 (Branches)**。
+即使您是獨立開發，使用分支也能幫助您組織思緒，讓您可以隨時「切換情境」或在其上做實驗，失敗了也能輕鬆丟棄。
 
-### Recommended Workflow:
-1.  **Create a new branch** for the feature:
+### 建議的工作流程：
+1.  為該功能 **建立一個新分支**：
     ```bash
-    git checkout -b feature/your-feature-name
+    git checkout -b feature/您的功能名稱
     ```
-2.  **Make changes** and test.
-3.  **Commit changes** to that branch.
-4.  **Merge** back to the main branch when done.
+2.  **進行修改** 並測試。
+3.  **提交變更** 到該分支。
+4.  完成後，**合併 (Merge)** 回主分支。
 
-### Commands for Branching:
+### 常用分支指令：
 ```bash
-# List all branches
+# 列出所有分支 (目前所在的分支前會有 * 號)
 git branch
 
-# Create and switch to a new branch
+# 建立並切換到一個新分支
 git checkout -b feature/new-ui-color
+# 新版 git (2.23+) 也可以用: git switch -c feature/new-ui-color
 
-# Switch back to the main branch
-git checkout master  # or main
+# 切換回主分支
+git checkout main
 
-# Merge the feature branch into the current branch
+# 將功能分支合併進當前分支
 git merge feature/new-ui-color
 ```
+
+## 3. 實戰練習記錄
+
+### 步驟 1：建立分支 (已完成)
+您已經成功執行了：
+```bash
+git checkout -b feature/add-readme
+```
+現在您位於 `feature/add-readme` 分支上，可以開始進行修改了。
+
+### 步驟 2：進行修改 (下一步)
+既然分支名稱叫 `add-readme`，我們來新增一個 `README.md` 說明文件看看。
+1. 在專案目錄下建立一個新檔案 `README.md`。
+2. 輸入一些專案介紹內容並存檔。
+
+### 步驟 3：提交變更 (待執行)
+修改完成後，我們將使用以下指令由 Git 儲存變更：
+```bash
+git add README.md
+git commit -m "Add project documentation"
+```
+
+### 💡 重要觀念：為什麼我切換分支了，檔案還在？
+**問題**：*我剛剛新增了 README.md，但切回 main 分支時，為什麼檔案沒有消失？*
+
+**原因**：**因為檔案還沒被提交 (Committed)！**
+在 Git 中，如果您只是新增了檔案，但還沒執行 `git commit`，這個檔案就像是「浮動」的一樣。Git 會好心地把它保留在工作目錄中，以免您遺失資料。
+
+**解決方法**：
+必須在分支中執行 `git add` 和 `git commit`，將檔案「鎖定」在該分支的歷史紀錄中。一旦提交後，再切換到其他分支，Git 知道該檔案不屬於那裡，就會自動幫您隱藏起來。
+
+### 🎓 進階觀念：為什麼不是「切換就自動儲存」？
+
+這是一個初學者最常見的疑問。您可以這樣想像：
+
+1.  **工作目錄 (你的書桌)**：
+    您在寫的 `README.md` 就像是書桌上的一張紙。
+2.  **分支 (不同的房間)**：
+    `main` 和 `feature` 就像是兩個不同的房間。
+
+**Git 的邏輯是：**
+當您在 A 房間的書桌上寫了一張紙 (新增檔案)，但還沒放進資料夾歸檔 (Commit)。
+這時如果您決定走到 B 房間 (切換分支)，**您會順手把這張紙也帶過去繼續寫**。
+
+Git 怕您是「忘記切換分支就開始工作」，所以它好心地保留了這張紙，讓您帶到正確的房間去歸檔。
+
+**只有當您執行 `git commit` (歸檔)**：
+這張紙才會被鎖進 A 房間的櫃子裡。這時候您兩手空空走到 B 房間，桌上就會是乾淨的（或者有 B 房間自己的檔案）。
+
+### 💡 補充：那「暫存 (Add)」的檔案呢？
+**問題**：*我已經執行了 `git add` (暫存)，為什麼切換分支時它還是跟著我？*
+
+**答案**：**暫存區 (Staging Area) 也是跟著人的！**
+`git add` 只是把紙張整理好放在手邊（準備歸檔），但還沒真正放入櫃子（Commit）。
+所以，**即使加入了暫存區，只要沒 Commit，它就會一直跟著您切換分支。**
+
+---
+
+### 步驟 4：切換分支 (重要指令)
+
+**情境**：如果您想暫時回到主程式看看，或者想切換回分支繼續工作。
+
+1.  **切換回主分支 (main)**：
+    ```bash
+    git checkout main
+    ```
+    *注意：此時您剛剛新增的 README.md 可能會消失，因為它只存在於 feature/add-readme 分支中，這是正常的！*
+
+2.  **切換回功能分支**：
+    ```bash
+    git checkout feature/add-readme
+    ```
+    *神奇的事發生了：README.md 又出現了！*
+
+### 步驟 5：合併分支 (任務完成)
+
+**情境**：您的功能開發完成且測試沒問題了，現在要把成果合併回主程式。
+
+1.  **先回到主分支**：
+    (因為我們要「把東西拿進來」，所以要先回到目的地)
+    ```bash
+    git checkout main
+    ```
+
+2.  **執行合併**：
+    ```bash
+    git merge feature/add-readme
+    ```
+    這時候，`main` 分支裡也會出現 `README.md` 了！您可以執行 `git log` 查看歷史紀錄，會發現剛剛的提交也出現在這裡了。
+
+### 步驟 6：刪除分支 (保持整潔)
+
+**情境**：既然功能已經合併進來，原本的分支就不需要了，留著只會混淆視聽。
+
+1.  **刪除已合併的分支**：
+    (參數 `-d` 代表 delete)
+    ```bash
+    git branch -d feature/add-readme
+    ```
+    *Git 很聰明，如果這個分支還有東西沒合併，它會阻止您刪除（這時要用 `-D` 強制刪除）。*
+
+## 4. 常見工作情境Ｑ＆Ａ
+
+## 4. 常見工作情境Ｑ＆Ａ
+
+### Q1：個人開發流程是這樣嗎？
+**問題**：*如果不只我一個人開發，我就是一直 Commit 分支，直到要併到 Main 對嗎？*
+
+**答案**：**完全正確！💯**
+這就是最標準的「Feature Branch Workflow (功能分支工作流)」。
+1.  想要加功能 A → 開 `feature/A` 分支
+2.  一直改、一直 Commit (都在 `feature/A` 裡)
+3.  功能 A 寫完了、測好了
+4.  切回 `main` 把 `feature/A` 併進來
+
+這樣可以確保 `main` 永遠是乾淨、穩定、隨時可以發布的版本。不會因為您正在寫一個開發到一半的功能，導致整個程式跑不動。
+
+### Q2：多人開發會不會衝突？
+**問題**：*如果我 Check 了一個分支，同事也由 Main Check 了一個分支，這樣是不是不會衝到？*
+
+**答案**：**是的，開發當下完全不會衝到！**
+您可以把它想像成：
+1.  **Main** 是公用佈告欄。
+2.  **您開分支** = 您影印了一份佈告欄的內容回您的位子上改。
+3.  **同事開分支** = 同事也影印了一份回他的位子上改。
+
+在你們「各自改各自的影印本」時，完全互不干擾。
+
+**這時會發生什麼事？**
+只有在最後「貼回佈告欄 (Merge)」的時候，才有可能遇到狀況：
+-   如果您改的是「登入頁面」，同事改的是「關於我們」。
+    👉 **完美合併**：Git 會聰明地把兩邊的修改都貼上去，沒事。
+-   如果您改了 `Form1.cs` 的第 10 行，同事剛好也改了 `Form1.cs` 的第 10 行。
+    👉 **發生衝突 (Conflict)**：這時候 Git 會停下來問您：「ㄟ，這一行你們兩個都要改，我要聽誰的？」這就是所謂的「解衝突」，通常是後合併的人要處理。
+
