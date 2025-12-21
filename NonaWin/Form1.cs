@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -72,12 +73,20 @@ namespace NonaWin
             }
         }
 
+
         private void LoadDirectoryInfo()
         {
             tvDirectories.Nodes.Clear();
 
             try
             {
+                // 🔥 新增：檢查是否為 ZIP 處理模式
+                if (chkProcessZip.Checked)
+                {
+                    LoadZipFilesList();
+                    return;
+                }
+
                 var subDirectories = Directory.GetDirectories(selectedDirectory);
                 
                 if (subDirectories.Length == 0)
@@ -191,6 +200,71 @@ namespace NonaWin
             }
         }
 
+        private void LoadZipFilesList()
+        {
+            try
+            {
+                // 掃描所有ZIP檔案
+                var zipFiles = Directory.GetFiles(selectedDirectory, "*.zip")
+                    .Where(f => !Path.GetFileName(f).Equals("ALL.zip", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => Path.GetFileName(f))
+                    .ToList();
+
+                if (zipFiles.Count == 0)
+                {
+                    lblDirectoryInfo.Text = "ZIP 模式（沒有找到 ZIP 檔案）";
+                    tvDirectories.Nodes.Add("沒有找到 ZIP 檔案");
+                    return;
+                }
+
+                int totalFiles = 0;
+
+                foreach (var zipFile in zipFiles)
+                {
+                    string zipName = Path.GetFileName(zipFile);
+                    long fileSize = new FileInfo(zipFile).Length;
+                    string fileSizeStr = fileSize > 1024 * 1024 
+                        ? $"{fileSize / 1024.0 / 1024.0:F2} MB" 
+                        : $"{fileSize / 1024.0:F2} KB";
+
+                    // 嘗試讀取 ZIP 內的圖檔數量
+                    int imageCount = 0;
+                    try
+                    {
+                        using (ZipArchive archive = ZipFile.OpenRead(zipFile))
+                        {
+                            imageCount = archive.Entries
+                                .Where(e => ImageExtensions.Contains(Path.GetExtension(e.Name).ToLower()))
+                                .Count();
+                        }
+                    }
+                    catch
+                    {
+                        imageCount = -1; // 表示無法讀取
+                    }
+
+                    string displayText = imageCount >= 0 
+                        ? $"📦 {zipName} ({fileSizeStr}, {imageCount} 個圖檔)"
+                        : $"📦 {zipName} ({fileSizeStr}, 無法讀取)";
+
+                    TreeNode node = new TreeNode(displayText);
+                    node.Tag = zipFile;
+                    node.ForeColor = Color.FromArgb(142, 68, 173); // 紫色標示 ZIP
+                    tvDirectories.Nodes.Add(node);
+
+                    if (imageCount > 0)
+                        totalFiles += imageCount;
+                }
+
+                lblDirectoryInfo.Text = $"ZIP 模式（共 {zipFiles.Count} 個 ZIP 檔案，預估 {totalFiles} 個圖檔）";
+            }
+            catch (Exception ex)
+            {
+                lblDirectoryInfo.Text = "ZIP 模式（載入失敗）";
+                tvDirectories.Nodes.Add($"錯誤：{ex.Message}");
+            }
+        }
+
         private async void AnalyzeDuplicatesAsync()
         {
             lstDuplicates.Items.Clear();
@@ -287,13 +361,29 @@ namespace NonaWin
             btnSelectFolder.Enabled = false;
             progressBar.Value = 0;
 
+            bool wasProcessingZip = chkProcessZip.Checked; // 記錄是否為 ZIP 模式
+
             try
             {
-                await Task.Run(() => ProcessImages());
+                // 檢查ZIP處理模式
+                if (chkProcessZip.Checked)
+                {
+                    await Task.Run(() => ProcessZipFiles());
+                }
+                else
+                {
+                    await Task.Run(() => ProcessImages());
+                }
                 
                 // 儲存設定
                 Properties.Settings.Default.SourceDirectory = selectedDirectory;
                 Properties.Settings.Default.Save();
+
+                // 🔥 新增：如果是 ZIP 模式，處理完成後自動取消勾選，讓用戶看到結果
+                if (wasProcessingZip)
+                {
+                    chkProcessZip.Checked = false; // 這會自動觸發 CheckedChanged 事件，重新載入目錄列表
+                }
 
                 MessageBox.Show($"圖檔複製完成！\n\n目標目錄：{Path.Combine(selectedDirectory, "ALL")}", 
                     "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -568,6 +658,217 @@ namespace NonaWin
             }
         }
 
+        private void ProcessZipFiles()
+        {
+            // 建立 ALL 目錄
+            string allDirectory = Path.Combine(selectedDirectory, "ALL");
+            if (!Directory.Exists(allDirectory))
+            {
+                Directory.CreateDirectory(allDirectory);
+            }
+
+            // 掃描所有ZIP檔案
+            var zipFiles = Directory.GetFiles(selectedDirectory, "*.zip")
+                .Where(f => !Path.GetFileName(f).Equals("ALL.zip", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(f => Path.GetFileName(f))
+                .ToList();
+
+            if (zipFiles.Count == 0)
+            {
+                UpdateStatus("找不到任何 ZIP 壓縮檔", Color.FromArgb(231, 76, 60));
+                return;
+            }
+
+            int totalCopied = 0;
+            int mainTabCounter = 0;
+
+            UpdateProgress(0, zipFiles.Count);
+            UpdateStatus($"找到 {zipFiles.Count} 個 ZIP 檔案，開始處理...", Color.FromArgb(52, 152, 219));
+
+            // 收集所有文件
+            var allNumberedFiles = new List<(string tempPath, string originalName)>();
+            var allMainTabFiles = new List<(string tempPath, string destName)>();
+
+            // 處理每個ZIP
+            for (int i = 0; i < zipFiles.Count; i++)
+            {
+                ProcessSingleZipArchive(zipFiles[i], allNumberedFiles, allMainTabFiles, ref mainTabCounter);
+                UpdateProgress(i + 1, zipFiles.Count);
+            }
+
+            // 複製main/tab檔案
+            foreach (var (tempPath, destName) in allMainTabFiles)
+            {
+                try
+                {
+                    string destPath = Path.Combine(allDirectory, destName);
+                    File.Copy(tempPath, destPath, true);
+                    File.Delete(tempPath);
+                    totalCopied++;
+                }
+                catch { }
+            }
+
+            // 複製數字檔案（重新編號或保留原名）
+            if (chkFilterMultipleOf12.Checked)
+            {
+                int newNumber = 1;
+                foreach (var (tempPath, _) in allNumberedFiles)
+                {
+                    try
+                    {
+                        string ext = Path.GetExtension(tempPath);
+                        string destPath = Path.Combine(allDirectory, $"{newNumber}{ext}");
+                        File.Copy(tempPath, destPath, true);
+                        File.Delete(tempPath);
+                        totalCopied++;
+                        newNumber++;
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                foreach (var (tempPath, originalName) in allNumberedFiles)
+                {
+                    try
+                    {
+                        string destPath = Path.Combine(allDirectory, originalName);
+                        File.Copy(tempPath, destPath, true);
+                        File.Delete(tempPath);
+                        totalCopied++;
+                    }
+                    catch { }
+                }
+            }
+
+            UpdateStatus($"完成！共從 {zipFiles.Count} 個 ZIP 檔案複製 {totalCopied} 個圖檔", Color.FromArgb(46, 204, 113));
+            
+            // 在UI線程上重新載入目錄資訊
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => LoadDirectoryInfo()));
+            }
+            else
+            {
+                LoadDirectoryInfo();
+            }
+        }
+
+        private void ProcessSingleZipArchive(string zipPath, 
+            List<(string tempPath, string originalName)> numberedFiles,
+            List<(string tempPath, string destName)> mainTabFiles,
+            ref int mainTabCounter)
+        {
+            string zipName = Path.GetFileNameWithoutExtension(zipPath);
+            UpdateStatus($"處理 ZIP：{zipName}...", Color.FromArgb(52, 152, 219));
+
+            bool foundMainTab = false;
+            int processedCount = 0;
+
+            try
+            {
+                using (ZipArchive archive = ZipFile.OpenRead(zipPath))
+                {
+                    // 🔥 修改：直接處理所有圖檔 entries（不分目錄）
+                    var allImageEntries = archive.Entries
+                        .Where(e => !string.IsNullOrEmpty(e.Name)) // 排除目錄本身
+                        .Where(e => ImageExtensions.Contains(Path.GetExtension(e.Name).ToLower()))
+                        .ToList();
+
+                    UpdateStatus($"ZIP {zipName}: 找到 {allImageEntries.Count} 個圖檔", Color.FromArgb(52, 152, 219));
+
+                    if (allImageEntries.Count == 0)
+                    {
+                        UpdateStatus($"ZIP {zipName}: 沒有圖檔", Color.FromArgb(231, 76, 60));
+                        return;
+                    }
+
+                    // 按目錄分組處理
+                    var groupedByDirectory = allImageEntries
+                        .GroupBy(e => Path.GetDirectoryName(e.FullName) ?? "")
+                        .ToList();
+
+                    foreach (var group in groupedByDirectory)
+                    {
+                        // 對每個目錄內的檔案排序
+                        var imageEntries = group
+                            .OrderBy(e =>
+                            {
+                                string nameWithoutExt = Path.GetFileNameWithoutExtension(e.Name);
+                                if (int.TryParse(nameWithoutExt, out int number))
+                                    return number;
+                                return int.MaxValue;
+                            })
+                            .ThenBy(e => e.Name)
+                            .ToList();
+
+                        // 處理每個圖檔
+                        for (int i = 0; i < imageEntries.Count; i++)
+                        {
+                            var entry = imageEntries[i];
+                            string fileName = Path.GetFileNameWithoutExtension(entry.Name);
+                            bool isLast = (i == imageEntries.Count - 1);
+
+                            // 檢查是否為 main 或 tab
+                            bool isMainOrTab = fileName.Equals("main", StringComparison.OrdinalIgnoreCase) ||
+                                               fileName.Equals("tab", StringComparison.OrdinalIgnoreCase);
+
+                            if (isMainOrTab)
+                            {
+                                // 自動編號
+                                string suffix = mainTabCounter == 0 ? "" : mainTabCounter.ToString();
+                                string destName = fileName + suffix + Path.GetExtension(entry.Name);
+                                
+                                // 提取到臨時文件
+                                using (Stream entryStream = entry.Open())
+                                using (var ms = new MemoryStream())
+                                {
+                                    entryStream.CopyTo(ms);
+                                    string tempPath = Path.Combine(Path.GetTempPath(), 
+                                        Guid.NewGuid().ToString() + Path.GetExtension(entry.Name));
+                                    File.WriteAllBytes(tempPath, ms.ToArray());
+                                    mainTabFiles.Add((tempPath, destName));
+                                    processedCount++;
+                                }
+                                foundMainTab = true;
+                                continue;
+                            }
+
+                            // 跳過最後一個檔案（非 main/tab）
+                            if (isLast) continue;
+
+                            // 過濾12倍數
+                            if (chkFilterMultipleOf12.Checked && IsMultipleOf12Filename(entry.Name))
+                                continue;
+
+                            // 提取到臨時文件
+                            using (Stream entryStream = entry.Open())
+                            using (var ms = new MemoryStream())
+                            {
+                                entryStream.CopyTo(ms);
+                                string tempPath = Path.Combine(Path.GetTempPath(),
+                                    Guid.NewGuid().ToString() + Path.GetExtension(entry.Name));
+                                File.WriteAllBytes(tempPath, ms.ToArray());
+                                numberedFiles.Add((tempPath, entry.Name));
+                                processedCount++;
+                            }
+                        }
+                    }
+                }
+
+                UpdateStatus($"ZIP {zipName}: 已提取 {processedCount} 個圖檔", Color.FromArgb(46, 204, 113));
+
+                // 如果這個ZIP有main/tab，增加計數器
+                if (foundMainTab)
+                    mainTabCounter++;
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"處理 {zipName} 時發生錯誤：{ex.Message}", Color.FromArgb(231, 76, 60));
+            }
+        }
+
         private bool IsMultipleOf12Filename(string filename)
         {
             // 取得不含副檔名的檔名
@@ -684,6 +985,15 @@ namespace NonaWin
             {
                 lblStatus.Text = message;
                 lblStatus.ForeColor = color;
+            }
+        }
+
+        private void chkProcessZip_CheckedChanged(object sender, EventArgs e)
+        {
+            // 當勾選/取消勾選 ZIP 模式時，重新載入目錄列表
+            if (!string.IsNullOrEmpty(selectedDirectory))
+            {
+                LoadDirectoryInfo();
             }
         }
 

@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.btnSelectFolder = new System.Windows.Forms.Button();
             this.lblSelectedPath = new System.Windows.Forms.Label();
+            this.chkProcessZip = new System.Windows.Forms.CheckBox();
             this.chkFilterMultipleOf12 = new System.Windows.Forms.CheckBox();
             this.btnExecute = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
@@ -69,7 +70,7 @@
             this.btnSelectFolder.Font = new System.Drawing.Font("Microsoft YaHei UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnSelectFolder.ForeColor = System.Drawing.Color.White;
             this.btnSelectFolder.Location = new System.Drawing.Point(48, 75);
-            this.btnSelectFolder.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnSelectFolder.Margin = new System.Windows.Forms.Padding(4);
             this.btnSelectFolder.Name = "btnSelectFolder";
             this.btnSelectFolder.Size = new System.Drawing.Size(1104, 50);
             this.btnSelectFolder.TabIndex = 1;
@@ -92,15 +93,29 @@
             this.lblSelectedPath.Text = "尚未選擇目錄";
             this.lblSelectedPath.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
+            // chkProcessZip
+            // 
+            this.chkProcessZip.AutoSize = true;
+            this.chkProcessZip.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
+            this.chkProcessZip.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
+            this.chkProcessZip.Location = new System.Drawing.Point(47, 661);
+            this.chkProcessZip.Margin = new System.Windows.Forms.Padding(4);
+            this.chkProcessZip.Name = "chkProcessZip";
+            this.chkProcessZip.Size = new System.Drawing.Size(301, 24);
+            this.chkProcessZip.TabIndex = 2;
+            this.chkProcessZip.Text = "處理 ZIP 壓縮檔（自動提取並整理圖片）";
+            this.chkProcessZip.UseVisualStyleBackColor = true;
+            this.chkProcessZip.CheckedChanged += new System.EventHandler(this.chkProcessZip_CheckedChanged);
+            // 
             // chkFilterMultipleOf12
             // 
             this.chkFilterMultipleOf12.AutoSize = true;
             this.chkFilterMultipleOf12.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
             this.chkFilterMultipleOf12.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
-            this.chkFilterMultipleOf12.Location = new System.Drawing.Point(47, 676);
-            this.chkFilterMultipleOf12.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkFilterMultipleOf12.Location = new System.Drawing.Point(47, 692);
+            this.chkFilterMultipleOf12.Margin = new System.Windows.Forms.Padding(4);
             this.chkFilterMultipleOf12.Name = "chkFilterMultipleOf12";
-            this.chkFilterMultipleOf12.Size = new System.Drawing.Size(420, 24);
+            this.chkFilterMultipleOf12.Size = new System.Drawing.Size(395, 24);
             this.chkFilterMultipleOf12.TabIndex = 3;
             this.chkFilterMultipleOf12.Text = "排除檔名為12倍數的圖檔 (如: 12.jpg, 24.png, 36.jpg)";
             this.chkFilterMultipleOf12.UseVisualStyleBackColor = true;
@@ -114,8 +129,8 @@
             this.btnExecute.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExecute.Font = new System.Drawing.Font("Microsoft YaHei UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnExecute.ForeColor = System.Drawing.Color.White;
-            this.btnExecute.Location = new System.Drawing.Point(48, 708);
-            this.btnExecute.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnExecute.Location = new System.Drawing.Point(48, 724);
+            this.btnExecute.Margin = new System.Windows.Forms.Padding(4);
             this.btnExecute.Name = "btnExecute";
             this.btnExecute.Size = new System.Drawing.Size(1104, 56);
             this.btnExecute.TabIndex = 4;
@@ -127,7 +142,7 @@
             // 
             this.lblStatus.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
             this.lblStatus.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(100)))), ((int)(((byte)(100)))));
-            this.lblStatus.Location = new System.Drawing.Point(48, 815);
+            this.lblStatus.Location = new System.Drawing.Point(48, 831);
             this.lblStatus.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(1104, 38);
@@ -136,8 +151,8 @@
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(48, 777);
-            this.progressBar.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.progressBar.Location = new System.Drawing.Point(48, 793);
+            this.progressBar.Margin = new System.Windows.Forms.Padding(4);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new System.Drawing.Size(1104, 25);
             this.progressBar.TabIndex = 5;
@@ -161,13 +176,14 @@
             this.panelMain.Controls.Add(this.lblTitle);
             this.panelMain.Controls.Add(this.btnSelectFolder);
             this.panelMain.Controls.Add(this.lblSelectedPath);
+            this.panelMain.Controls.Add(this.chkProcessZip);
             this.panelMain.Controls.Add(this.chkFilterMultipleOf12);
             this.panelMain.Controls.Add(this.btnExecute);
             this.panelMain.Controls.Add(this.progressBar);
             this.panelMain.Controls.Add(this.lblStatus);
             this.panelMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelMain.Location = new System.Drawing.Point(0, 0);
-            this.panelMain.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panelMain.Margin = new System.Windows.Forms.Padding(4);
             this.panelMain.Name = "panelMain";
             this.panelMain.Size = new System.Drawing.Size(1200, 875);
             this.panelMain.TabIndex = 0;
@@ -178,10 +194,10 @@
             this.tabControl.Controls.Add(this.tpDuplicates);
             this.tabControl.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F, System.Drawing.FontStyle.Bold);
             this.tabControl.Location = new System.Drawing.Point(48, 188);
-            this.tabControl.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabControl.Margin = new System.Windows.Forms.Padding(4);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(1104, 480);
+            this.tabControl.Size = new System.Drawing.Size(1104, 473);
             this.tabControl.TabIndex = 3;
             // 
             // tpDirectories
@@ -190,10 +206,10 @@
             this.tpDirectories.Controls.Add(this.lblDirectoryInfo);
             this.tpDirectories.Controls.Add(this.tvDirectories);
             this.tpDirectories.Location = new System.Drawing.Point(4, 28);
-            this.tpDirectories.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tpDirectories.Margin = new System.Windows.Forms.Padding(4);
             this.tpDirectories.Name = "tpDirectories";
-            this.tpDirectories.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.tpDirectories.Size = new System.Drawing.Size(1096, 448);
+            this.tpDirectories.Padding = new System.Windows.Forms.Padding(4);
+            this.tpDirectories.Size = new System.Drawing.Size(1096, 441);
             this.tpDirectories.TabIndex = 0;
             this.tpDirectories.Text = "📁 目錄預覽與預覽圖";
             this.tpDirectories.UseVisualStyleBackColor = true;
@@ -204,7 +220,7 @@
             this.lvImages.HideSelection = false;
             this.lvImages.LargeImageList = this.imgListThumbnails;
             this.lvImages.Location = new System.Drawing.Point(373, 44);
-            this.lvImages.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.lvImages.Margin = new System.Windows.Forms.Padding(4);
             this.lvImages.Name = "lvImages";
             this.lvImages.Size = new System.Drawing.Size(711, 386);
             this.lvImages.TabIndex = 2;
@@ -234,7 +250,7 @@
             this.tvDirectories.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
             this.tvDirectories.HideSelection = false;
             this.tvDirectories.Location = new System.Drawing.Point(8, 44);
-            this.tvDirectories.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tvDirectories.Margin = new System.Windows.Forms.Padding(4);
             this.tvDirectories.Name = "tvDirectories";
             this.tvDirectories.ShowLines = false;
             this.tvDirectories.ShowPlusMinus = false;
@@ -254,7 +270,7 @@
             this.menuCleanMultipleOf12,
             this.menuRenumberAllFiles});
             this.contextMenuTreeView.Name = "contextMenuTreeView";
-            this.contextMenuTreeView.Size = new System.Drawing.Size(281, 106);
+            this.contextMenuTreeView.Size = new System.Drawing.Size(281, 130);
             this.contextMenuTreeView.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuTreeView_Opening);
             // 
             // menuSetMainTabSource
@@ -293,7 +309,7 @@
             // menuRenumberAllFiles
             // 
             this.menuRenumberAllFiles.Name = "menuRenumberAllFiles";
-            this.menuRenumberAllFiles.Size = new System.Drawing.Size(280, 22);
+            this.menuRenumberAllFiles.Size = new System.Drawing.Size(280, 24);
             this.menuRenumberAllFiles.Text = "🔢 重新編號所有檔案";
             this.menuRenumberAllFiles.Click += new System.EventHandler(this.menuRenumberAllFiles_Click);
             // 
@@ -302,10 +318,10 @@
             this.tpDuplicates.Controls.Add(this.lblDuplicateInfo);
             this.tpDuplicates.Controls.Add(this.lstDuplicates);
             this.tpDuplicates.Location = new System.Drawing.Point(4, 28);
-            this.tpDuplicates.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tpDuplicates.Margin = new System.Windows.Forms.Padding(4);
             this.tpDuplicates.Name = "tpDuplicates";
-            this.tpDuplicates.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.tpDuplicates.Size = new System.Drawing.Size(1096, 443);
+            this.tpDuplicates.Padding = new System.Windows.Forms.Padding(4);
+            this.tpDuplicates.Size = new System.Drawing.Size(1096, 448);
             this.tpDuplicates.TabIndex = 1;
             this.tpDuplicates.Text = "📑 重複檔案分析";
             this.tpDuplicates.UseVisualStyleBackColor = true;
@@ -328,7 +344,7 @@
             this.lstDuplicates.FormattingEnabled = true;
             this.lstDuplicates.ItemHeight = 20;
             this.lstDuplicates.Location = new System.Drawing.Point(8, 44);
-            this.lstDuplicates.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.lstDuplicates.Margin = new System.Windows.Forms.Padding(4);
             this.lstDuplicates.Name = "lstDuplicates";
             this.lstDuplicates.Size = new System.Drawing.Size(1077, 380);
             this.lstDuplicates.TabIndex = 1;
@@ -340,7 +356,7 @@
             this.ClientSize = new System.Drawing.Size(1200, 875);
             this.Controls.Add(this.panelMain);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -376,6 +392,7 @@
         private System.Windows.Forms.TabPage tpDuplicates;
         private System.Windows.Forms.Label lblDuplicateInfo;
         private System.Windows.Forms.ListBox lstDuplicates;
+        private System.Windows.Forms.CheckBox chkProcessZip;
         private System.Windows.Forms.CheckBox chkFilterMultipleOf12;
         private System.Windows.Forms.Button btnExecute;
         private System.Windows.Forms.ToolStripMenuItem menuCleanMultipleOf12;
