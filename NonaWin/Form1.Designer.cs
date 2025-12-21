@@ -102,7 +102,7 @@
             this.chkFilterMultipleOf12.Name = "chkFilterMultipleOf12";
             this.chkFilterMultipleOf12.Size = new System.Drawing.Size(420, 24);
             this.chkFilterMultipleOf12.TabIndex = 3;
-            this.chkFilterMultipleOf12.Text = "☑ 排除檔名為12倍數的圖檔 (如: 12.jpg, 24.png, 36.jpg)";
+            this.chkFilterMultipleOf12.Text = "排除檔名為12倍數的圖檔 (如: 12.jpg, 24.png, 36.jpg)";
             this.chkFilterMultipleOf12.UseVisualStyleBackColor = true;
             // 
             // btnExecute
