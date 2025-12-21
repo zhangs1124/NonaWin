@@ -333,110 +333,225 @@ namespace NonaWin
 
             UpdateProgress(0, subDirectories.Length);
 
-            foreach (var subDir in subDirectories)
+            // 🔥 新邏輯：如果勾選過濾，先收集所有檔案再統一處理
+            if (chkFilterMultipleOf12.Checked)
             {
-                // 跳過 ALL 目錄本身
-                if (Path.GetFileName(subDir).Equals("ALL", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                UpdateStatus($"處理目錄：{Path.GetFileName(subDir)}...", Color.FromArgb(52, 152, 219));
-
-                // 取得目錄中所有圖檔（按檔名排序）
-                var imageFiles = Directory.GetFiles(subDir)
-                    .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
-                    .OrderBy(f => Path.GetFileName(f))
-                    .ToList();
-
-                if (imageFiles.Count == 0)
-                {
-                    totalProcessed++;
-                    UpdateProgress(totalProcessed, subDirectories.Length);
-                    continue;
-                }
-
-                // 過濾檔案
-                var filesToCopy = new List<string>();
-                bool isMainTabSource = !string.IsNullOrEmpty(mainTabSourceDirectory) && 
-                                       subDir.Equals(mainTabSourceDirectory, StringComparison.OrdinalIgnoreCase);
+                // 收集所有要複製的檔案
+                var allFilesToCopy = new List<string>();
+                var mainTabFiles = new List<string>(); // 分開存放 main/tab 檔案
                 
-                for (int i = 0; i < imageFiles.Count; i++)
+                // 如果沒有指定 main/tab 來源，預設使用第一個目錄
+                if (string.IsNullOrEmpty(mainTabSourceDirectory))
                 {
-                    string fileName = Path.GetFileNameWithoutExtension(imageFiles[i]);
-                    bool isLast = (i == imageFiles.Count - 1);
-
-                    // 檢查是否為 main 或 tab
-                    bool isMainOrTab = fileName.Equals("main", StringComparison.OrdinalIgnoreCase) ||
-                                      fileName.Equals("tab", StringComparison.OrdinalIgnoreCase);
-
-                    // 規則 1：main/tab 檔案只有在此目錄是指定來源時才複製
-                    if (isMainOrTab)
+                    var firstDir = subDirectories
+                        .FirstOrDefault(d => !Path.GetFileName(d).Equals("ALL", StringComparison.OrdinalIgnoreCase));
+                    if (firstDir != null)
                     {
-                        if (!isMainTabSource)
-                        {
-                            continue; // 不是來源目錄，跳過 main/tab
-                        }
-                        // 是來源目錄，則加入複製清單
-                        filesToCopy.Add(imageFiles[i]);
-                        continue;
+                        mainTabSourceDirectory = firstDir;
                     }
-
-                    // 規則 2：排除每個目錄的最後一個檔案（非 main/tab 的情況）
-                    if (isLast)
-                    {
-                        continue;
-                    }
-
-                    filesToCopy.Add(imageFiles[i]);
                 }
 
-                // 複製檔案到 ALL 目錄
-                foreach (var sourceFile in filesToCopy)
+                foreach (var subDir in subDirectories)
+                {
+                    // 跳過 ALL 目錄本身
+                    if (Path.GetFileName(subDir).Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    UpdateStatus($"掃描目錄：{Path.GetFileName(subDir)}...", Color.FromArgb(52, 152, 219));
+
+                    // 取得目錄中所有圖檔（按檔名排序）
+                    var imageFiles = Directory.GetFiles(subDir)
+                        .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                        .OrderBy(f => Path.GetFileName(f))
+                        .ToList();
+
+                    if (imageFiles.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    // 過濾檔案
+                    bool isMainTabSource = !string.IsNullOrEmpty(mainTabSourceDirectory) && 
+                                           subDir.Equals(mainTabSourceDirectory, StringComparison.OrdinalIgnoreCase);
+                    
+                    for (int i = 0; i < imageFiles.Count; i++)
+                    {
+                        string fileName = Path.GetFileNameWithoutExtension(imageFiles[i]);
+                        bool isLast = (i == imageFiles.Count - 1);
+
+                        // 檢查是否為 main 或 tab
+                        bool isMainOrTab = fileName.Equals("main", StringComparison.OrdinalIgnoreCase) ||
+                                          fileName.Equals("tab", StringComparison.OrdinalIgnoreCase);
+
+                        // 規則 1：main/tab 檔案只有在此目錄是指定來源時才複製
+                        if (isMainOrTab)
+                        {
+                            if (!isMainTabSource)
+                            {
+                                continue; // 不是來源目錄，跳過 main/tab
+                            }
+                            // 是來源目錄，則加入 main/tab 專用清單
+                            mainTabFiles.Add(imageFiles[i]);
+                            continue;
+                        }
+
+                        // 規則 2：排除每個目錄的最後一個檔案（非 main/tab 的情況）
+                        if (isLast)
+                        {
+                            continue;
+                        }
+
+                        // 規則 3：過濾12倍數檔案
+                        if (IsMultipleOf12Filename(Path.GetFileName(imageFiles[i])))
+                        {
+                            continue; // 跳過12倍數
+                        }
+
+                        allFilesToCopy.Add(imageFiles[i]);
+                    }
+                }
+
+                // 重新編號並複製
+                int newNumber = 1;
+                
+                // 先複製 main/tab 檔案（保持原名）
+                foreach (var sourceFile in mainTabFiles)
                 {
                     string fileName = Path.GetFileName(sourceFile);
                     string destFile = Path.Combine(allDirectory, fileName);
                     
-                    // 如果目標檔案已存在，加上目錄前綴避免衝突
-                    if (File.Exists(destFile))
-                    {
-                        string dirName = Path.GetFileName(subDir);
-                        fileName = $"{dirName}_{fileName}";
-                        destFile = Path.Combine(allDirectory, fileName);
-
-                        // 檢查檔案是否已存在 (在加上目錄前綴後)
-                        if (File.Exists(destFile))
-                        {
-                            // 詢問使用者如何處理
-                            var result = MessageBox.Show(
-                                $"檔案已存在：{Path.GetFileName(sourceFile)}\n\n" +
-                                $"是否要覆蓋？\n\n" +
-                                $"是(Y) = 覆蓋\n" +
-                                $"否(N) = 跳過此檔案\n" +
-                                $"取消 = 停止整個複製作業",
-                                "檔案已存在",
-                                MessageBoxButtons.YesNoCancel,
-                                MessageBoxIcon.Question);
-
-                            if (result == DialogResult.Cancel)
-                            {
-                                UpdateStatus("使用者取消操作", Color.Orange);
-                                return; // 停止整個作業
-                            }
-                            else if (result == DialogResult.No)
-                            {
-                                continue; // 跳過此檔案
-                            }
-                            // DialogResult.Yes 則繼續覆蓋
-                        }
-                    }
-
+                    UpdateStatus($"複製 main/tab：{fileName}", Color.FromArgb(52, 152, 219));
+                    
                     File.Copy(sourceFile, destFile, true);
                     totalCopied++;
                 }
+                
+                // 再複製數字檔案（重新編號）
+                foreach (var sourceFile in allFilesToCopy)
+                {
+                    string ext = Path.GetExtension(sourceFile);
+                    string newFileName = $"{newNumber}{ext}";
+                    string destFile = Path.Combine(allDirectory, newFileName);
 
-                totalProcessed++;
-                UpdateProgress(totalProcessed, subDirectories.Length);
+                    UpdateStatus($"複製並重新編號：{Path.GetFileName(sourceFile)} → {newFileName}", Color.FromArgb(52, 152, 219));
+
+                    File.Copy(sourceFile, destFile, true);
+                    totalCopied++;
+                    newNumber++;
+                }
+
+                UpdateProgress(subDirectories.Length, subDirectories.Length);
+            }
+            else
+            {
+                // 原始邏輯：不勾選時，保留原檔名複製
+                foreach (var subDir in subDirectories)
+                {
+                    // 跳過 ALL 目錄本身
+                    if (Path.GetFileName(subDir).Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    UpdateStatus($"處理目錄：{Path.GetFileName(subDir)}...", Color.FromArgb(52, 152, 219));
+
+                    // 取得目錄中所有圖檔（按檔名排序）
+                    var imageFiles = Directory.GetFiles(subDir)
+                        .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                        .OrderBy(f => Path.GetFileName(f))
+                        .ToList();
+
+                    if (imageFiles.Count == 0)
+                    {
+                        totalProcessed++;
+                        UpdateProgress(totalProcessed, subDirectories.Length);
+                        continue;
+                    }
+
+                    // 過濾檔案
+                    var filesToCopy = new List<string>();
+                    bool isMainTabSource = !string.IsNullOrEmpty(mainTabSourceDirectory) && 
+                                           subDir.Equals(mainTabSourceDirectory, StringComparison.OrdinalIgnoreCase);
+                    
+                    for (int i = 0; i < imageFiles.Count; i++)
+                    {
+                        string fileName = Path.GetFileNameWithoutExtension(imageFiles[i]);
+                        bool isLast = (i == imageFiles.Count - 1);
+
+                        // 檢查是否為 main 或 tab
+                        bool isMainOrTab = fileName.Equals("main", StringComparison.OrdinalIgnoreCase) ||
+                                          fileName.Equals("tab", StringComparison.OrdinalIgnoreCase);
+
+                        // 規則 1：main/tab 檔案只有在此目錄是指定來源時才複製
+                        if (isMainOrTab)
+                        {
+                            if (!isMainTabSource)
+                            {
+                                continue; // 不是來源目錄，跳過 main/tab
+                            }
+                            // 是來源目錄，則加入複製清單
+                            filesToCopy.Add(imageFiles[i]);
+                            continue;
+                        }
+
+                        // 規則 2：排除每個目錄的最後一個檔案（非 main/tab 的情況）
+                        if (isLast)
+                        {
+                            continue;
+                        }
+
+                        filesToCopy.Add(imageFiles[i]);
+                    }
+
+                    // 複製檔案到 ALL 目錄
+                    foreach (var sourceFile in filesToCopy)
+                    {
+                        string fileName = Path.GetFileName(sourceFile);
+                        string destFile = Path.Combine(allDirectory, fileName);
+                        
+                        // 如果目標檔案已存在，加上目錄前綴避免衝突
+                        if (File.Exists(destFile))
+                        {
+                            string dirName = Path.GetFileName(subDir);
+                            fileName = $"{dirName}_{fileName}";
+                            destFile = Path.Combine(allDirectory, fileName);
+
+                            // 檢查檔案是否已存在 (在加上目錄前綴後)
+                            if (File.Exists(destFile))
+                            {
+                                // 詢問使用者如何處理
+                                var result = MessageBox.Show(
+                                    $"檔案已存在：{Path.GetFileName(sourceFile)}\n\n" +
+                                    $"是否要覆蓋？\n\n" +
+                                    $"是(Y) = 覆蓋\n" +
+                                    $"否(N) = 跳過此檔案\n" +
+                                    $"取消 = 停止整個複製作業",
+                                    "檔案已存在",
+                                    MessageBoxButtons.YesNoCancel,
+                                    MessageBoxIcon.Question);
+
+                                if (result == DialogResult.Cancel)
+                                {
+                                    UpdateStatus("使用者取消操作", Color.Orange);
+                                    return; // 停止整個作業
+                                }
+                                else if (result == DialogResult.No)
+                                {
+                                    continue; // 跳過此檔案
+                                }
+                                // DialogResult.Yes 則繼續覆蓋
+                            }
+                        }
+
+                        File.Copy(sourceFile, destFile, true);
+                        totalCopied++;
+                    }
+
+                    totalProcessed++;
+                    UpdateProgress(totalProcessed, subDirectories.Length);
+                }
             }
 
             UpdateStatus($"完成！共複製 {totalCopied} 個圖檔到 ALL 目錄", Color.FromArgb(46, 204, 113));
@@ -450,6 +565,108 @@ namespace NonaWin
             else
             {
                 LoadDirectoryInfo();
+            }
+        }
+
+        private bool IsMultipleOf12Filename(string filename)
+        {
+            // 取得不含副檔名的檔名
+            string nameWithoutExt = Path.GetFileNameWithoutExtension(filename);
+
+            // 嘗試轉換為數字
+            if (int.TryParse(nameWithoutExt, out int number))
+            {
+                // 判斷是否為12的倍數（且大於0）
+                return number % 12 == 0 && number > 0;
+            }
+
+            return false;
+        }
+
+        private void CleanAndRenumberFiles()
+        {
+            string allDir = Path.Combine(selectedDirectory, "ALL");
+
+            if (!Directory.Exists(allDir))
+            {
+                MessageBox.Show("ALL 目錄不存在。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 1. 掃描所有圖檔並排序
+            var allFiles = Directory.GetFiles(allDir, "*.*")
+                .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                .Where(f => int.TryParse(Path.GetFileNameWithoutExtension(f), out _))
+                .OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)))
+                .ToList();
+
+            // 2. 找出12倍數的檔案
+            var filesToDelete = allFiles
+                .Where(f => IsMultipleOf12Filename(Path.GetFileName(f)))
+                .ToList();
+
+            if (filesToDelete.Count == 0)
+            {
+                MessageBox.Show("沒有找到12倍數的檔案。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 3. 確認對話框
+            var result = MessageBox.Show(
+                $"找到 {filesToDelete.Count} 個12倍數檔案\n" +
+                $"刪除後將重新編號所有檔案\n" +
+                $"這個操作無法復原，確定要繼續嗎？",
+                "確認刪除並重新編號",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // 4. 刪除12倍數檔案
+                foreach (var file in filesToDelete)
+                {
+                    File.Delete(file);
+                }
+
+                // 5. 重新掃描剩餘檔案（已刪除12倍數）
+                var remainingFiles = Directory.GetFiles(allDir, "*.*")
+                    .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                    .Where(f => int.TryParse(Path.GetFileNameWithoutExtension(f), out _))
+                    .OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)))
+                    .ToList();
+
+                // 6. 先重新命名為臨時名稱（避免衝突）
+                var tempFiles = new List<string>();
+                for (int i = 0; i < remainingFiles.Count; i++)
+                {
+                    string ext = Path.GetExtension(remainingFiles[i]);
+                    string tempName = Path.Combine(allDir, $"temp_{i:D4}{ext}");
+                    File.Move(remainingFiles[i], tempName);
+                    tempFiles.Add(tempName);
+                }
+
+                // 7. 重新命名為正確編號（從1開始）
+                for (int i = 0; i < tempFiles.Count; i++)
+                {
+                    string ext = Path.GetExtension(tempFiles[i]);
+                    string newName = Path.Combine(allDir, $"{i + 1}{ext}");
+                    File.Move(tempFiles[i], newName);
+                }
+
+                // 8. 更新UI
+                LoadDirectoryInfo();
+                MessageBox.Show(
+                    $"已完成！\n刪除 {filesToDelete.Count} 個檔案\n重新編號 {remainingFiles.Count} 個檔案",
+                    "完成",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"操作失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -543,6 +760,8 @@ namespace NonaWin
             menuClearMainTabSource.Visible = !isAllDirectory;
             menuSeparator.Visible = !isAllDirectory;
             menuClearAllDirectory.Visible = isAllDirectory;
+            menuCleanMultipleOf12.Visible = isAllDirectory; // 新增：12倍數清理選項也只在 ALL 目錄顯示
+            menuRenumberAllFiles.Visible = isAllDirectory; // 新增：重新編號選項也只在 ALL 目錄顯示
         }
 
         private void menuClearAllDirectory_Click(object sender, EventArgs e)
@@ -597,6 +816,85 @@ namespace NonaWin
             }
         }
 
+        private void menuCleanMultipleOf12_Click(object sender, EventArgs e)
+        {
+            CleanAndRenumberFiles();
+        }
+
+        private void menuRenumberAllFiles_Click(object sender, EventArgs e)
+        {
+            RenumberAllFiles();
+        }
+
+        private void RenumberAllFiles()
+        {
+            string allDir = Path.Combine(selectedDirectory, "ALL");
+
+            if (!Directory.Exists(allDir))
+            {
+                MessageBox.Show("ALL 目錄不存在。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 1. 掉描所有的數字檔名
+            var numberFiles = Directory.GetFiles(allDir, "*.*")
+                .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                .Where(f => int.TryParse(Path.GetFileNameWithoutExtension(f), out _))
+                .OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)))
+                .ToList();
+
+            if (numberFiles.Count == 0)
+            {
+                MessageBox.Show("沒有找到可重新編號的檔案。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 2. 確認對話框
+            var result = MessageBox.Show(
+                $"找到 {numberFiles.Count} 個數字檔名\n" +
+                $"將重新編號為 1, 2, 3...\n" +
+                $"這個操作無法復原，確定要繼續嗎？",
+                "確認重新編號",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // 3. 先重新命名為臨時名稱（避免衝突）
+                var tempFiles = new List<string>();
+                for (int i = 0; i < numberFiles.Count; i++)
+                {
+                    string ext = Path.GetExtension(numberFiles[i]);
+                    string tempName = Path.Combine(allDir, $"temp_{i:D4}{ext}");
+                    File.Move(numberFiles[i], tempName);
+                    tempFiles.Add(tempName);
+                }
+
+                // 4. 重新命名為正確編號（從1開始）
+                for (int i = 0; i < tempFiles.Count; i++)
+                {
+                    string ext = Path.GetExtension(tempFiles[i]);
+                    string newName = Path.Combine(allDir, $"{i + 1}{ext}");
+                    File.Move(tempFiles[i], newName);
+                }
+
+                // 5. 更新UI
+                LoadDirectoryInfo();
+                MessageBox.Show(
+                    $"已完成！\n重新編號 {numberFiles.Count} 個檔案",
+                    "完成",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"操作失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private async Task LoadThumbnailsAsync(string path)
         {
             lvImages.Items.Clear();
@@ -605,6 +903,19 @@ namespace NonaWin
             var imageFiles = Directory.GetFiles(path)
                 .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLower()))
                 .ToList();
+            
+            // 🔥 修正：按檔名數字排序（如果是數字檔名）
+            imageFiles = imageFiles.OrderBy(f =>
+            {
+                string nameWithoutExt = Path.GetFileNameWithoutExtension(f);
+                // 如果是純數字檔名，按數字排序
+                if (int.TryParse(nameWithoutExt, out int number))
+                {
+                    return number;
+                }
+                // 否則按字串排序（main, tab 等）
+                return int.MaxValue; // 讓 main/tab 排在最後
+            }).ThenBy(f => Path.GetFileName(f)).ToList();
 
             if (imageFiles.Count == 0) return;
 
