@@ -110,6 +110,8 @@
             // chkFilterMultipleOf12
             // 
             this.chkFilterMultipleOf12.AutoSize = true;
+            this.chkFilterMultipleOf12.Checked = true;
+            this.chkFilterMultipleOf12.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkFilterMultipleOf12.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
             this.chkFilterMultipleOf12.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
             this.chkFilterMultipleOf12.Location = new System.Drawing.Point(47, 692);

@@ -709,37 +709,26 @@ namespace NonaWin
                 catch { }
             }
 
-            // 複製數字檔案（重新編號或保留原名）
-            if (chkFilterMultipleOf12.Checked)
+            // 複製數字檔案
+            // 策略：ZIP 批次處理時，為了避免不同 ZIP 間的檔名衝突（覆蓋），
+            // 統一採用連續編號。勾選框僅決定「是否跳過 12 的倍數」。
+            
+            int newNumber = 1;
+            foreach (var (tempPath, originalName) in allNumberedFiles)
             {
-                int newNumber = 1;
-                foreach (var (tempPath, _) in allNumberedFiles)
+                try
                 {
-                    try
-                    {
-                        string ext = Path.GetExtension(tempPath);
-                        string destPath = Path.Combine(allDirectory, $"{newNumber}{ext}");
-                        File.Copy(tempPath, destPath, true);
-                        File.Delete(tempPath);
-                        totalCopied++;
-                        newNumber++;
-                    }
-                    catch { }
+                    string ext = Path.GetExtension(tempPath);
+                    string destPath = Path.Combine(allDirectory, $"{newNumber}{ext}");
+                    
+                    // 複製檔案
+                    File.Copy(tempPath, destPath, true);
+                    File.Delete(tempPath);
+                    
+                    totalCopied++;
+                    newNumber++;
                 }
-            }
-            else
-            {
-                foreach (var (tempPath, originalName) in allNumberedFiles)
-                {
-                    try
-                    {
-                        string destPath = Path.Combine(allDirectory, originalName);
-                        File.Copy(tempPath, destPath, true);
-                        File.Delete(tempPath);
-                        totalCopied++;
-                    }
-                    catch { }
-                }
+                catch { }
             }
 
             UpdateStatus($"完成！共從 {zipFiles.Count} 個 ZIP 檔案複製 {totalCopied} 個圖檔", Color.FromArgb(46, 204, 113));
