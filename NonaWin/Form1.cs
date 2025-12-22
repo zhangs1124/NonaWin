@@ -522,7 +522,7 @@ namespace NonaWin
                 foreach (var sourceFile in allFilesToCopy)
                 {
                     string ext = Path.GetExtension(sourceFile);
-                    string newFileName = $"{newNumber}{ext}";
+                    string newFileName = $"{newNumber:D2}{ext}";
                     string destFile = Path.Combine(allDirectory, newFileName);
 
                     UpdateStatus($"複製並重新編號：{Path.GetFileName(sourceFile)} → {newFileName}", Color.FromArgb(52, 152, 219));
@@ -719,7 +719,7 @@ namespace NonaWin
                 try
                 {
                     string ext = Path.GetExtension(tempPath);
-                    string destPath = Path.Combine(allDirectory, $"{newNumber}{ext}");
+                    string destPath = Path.Combine(allDirectory, $"{newNumber:D2}{ext}");
                     
                     // 複製檔案
                     File.Copy(tempPath, destPath, true);
@@ -942,7 +942,7 @@ namespace NonaWin
                 for (int i = 0; i < tempFiles.Count; i++)
                 {
                     string ext = Path.GetExtension(tempFiles[i]);
-                    string newName = Path.Combine(allDir, $"{i + 1}{ext}");
+                    string newName = Path.Combine(allDir, $"{(i + 1):D2}{ext}");
                     File.Move(tempFiles[i], newName);
                 }
 
@@ -1176,7 +1176,7 @@ namespace NonaWin
                 for (int i = 0; i < tempFiles.Count; i++)
                 {
                     string ext = Path.GetExtension(tempFiles[i]);
-                    string newName = Path.Combine(allDir, $"{i + 1}{ext}");
+                    string newName = Path.Combine(allDir, $"{(i + 1):D2}{ext}");
                     File.Move(tempFiles[i], newName);
                 }
 
