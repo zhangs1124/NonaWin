@@ -31,7 +31,7 @@ namespace NonaWin
                 Directory.Exists(Properties.Settings.Default.SourceDirectory))
             {
                 selectedDirectory = Properties.Settings.Default.SourceDirectory;
-                lblSelectedPath.Text = selectedDirectory;
+                txtSourcePath.Text = selectedDirectory; // 顯示於 TextBox
                 btnExecute.Enabled = true;
                 lblStatus.Text = "已載入上次選擇的目錄";
                 lblStatus.ForeColor = Color.FromArgb(52, 152, 219);
@@ -50,7 +50,13 @@ namespace NonaWin
                 dialog.Description = "請選擇包含圖檔的來源目錄";
                 dialog.ShowNewFolderButton = false;
                 
-                if (!string.IsNullOrEmpty(selectedDirectory))
+                // 優先使用 txtSourcePath 的路徑作為起始目錄
+                string currentPath = txtSourcePath.Text.Trim();
+                if (!string.IsNullOrEmpty(currentPath) && Directory.Exists(currentPath))
+                {
+                    dialog.SelectedPath = currentPath;
+                }
+                else if (!string.IsNullOrEmpty(selectedDirectory))
                 {
                     dialog.SelectedPath = selectedDirectory;
                 }
@@ -58,7 +64,7 @@ namespace NonaWin
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     selectedDirectory = dialog.SelectedPath;
-                    lblSelectedPath.Text = selectedDirectory;
+                    txtSourcePath.Text = selectedDirectory; // 同步到 TextBox
                     
                     // 載入目錄資訊
                     LoadDirectoryInfo();
@@ -398,6 +404,30 @@ namespace NonaWin
                 btnExecute.Enabled = true;
                 btnSelectFolder.Enabled = true;
             }
+        }
+
+        // 新增：手動儲存路徑的按鈕事件處理
+        private void btnSavePath_Click(object sender, EventArgs e)
+        {
+            var path = txtSourcePath.Text.Trim();
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            {
+                MessageBox.Show("請輸入有效的來源目錄路徑", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 更新全域變數與 UI
+            selectedDirectory = path;
+            // lblSelectedPath.Text = path; // Removed
+            btnExecute.Enabled = true;
+
+            // 儲存設定
+            Properties.Settings.Default.SourceDirectory = path;
+            Properties.Settings.Default.Save();
+
+            // 重新載入目錄資訊與重複分析
+            LoadDirectoryInfo();
+            AnalyzeDuplicatesAsync();
         }
 
         private void ProcessImages()
